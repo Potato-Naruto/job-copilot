@@ -1,0 +1,65 @@
+{
+  "manifest_version": 2,
+  "name": "Job Copilot",
+  "version": "1.0.0",
+  "description": "One-click job application autofill, remembered answers, recruiter-grade cover letters, and per-role tailored resume PDFs.",
+  "icons": {
+    "48": "icons/icon.svg",
+    "96": "icons/icon.svg"
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "webRequest",
+    "webRequestBlocking",
+    "<all_urls>"
+  ],
+  "background": {
+    "scripts": [
+      "lib/pdf.js",
+      "lib/ai.js",
+      "background.js"
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "browser_action": {
+    "default_title": "Job Copilot",
+    "default_icon": "icons/icon.svg",
+    "default_popup": "popup.html"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "commands": {
+    "toggle-panel": {
+      "suggested_key": {
+        "default": "Alt+Shift+J"
+      },
+      "description": "Show the Job Copilot panel on this page"
+    }
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "job-copilot@local",
+      "strict_min_version": "91.0",
+      "data_collection_permissions": {
+        "required": [
+          "personallyIdentifyingInfo",
+          "websiteContent"
+        ]
+      }
+    }
+  }
+}

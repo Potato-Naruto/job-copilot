@@ -1,0 +1,119 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Job Copilot Settings</title>
+<style>
+  :root{--bg:#f5f6fa;--card:#fff;--ink:#1b1f2a;--mut:#667;--line:#dfe3ee;--acc:#2f5bea}
+  @media (prefers-color-scheme:dark){:root{--bg:#14161c;--card:#1d2028;--ink:#e8eaf0;--mut:#9aa1b5;--line:#2c303c}}
+  *{box-sizing:border-box}
+  .hidden{display:none!important}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,sans-serif}
+  main{max-width:860px;margin:0 auto;padding:24px 16px 90px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--mut);margin-bottom:18px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:14px 0}
+  h2{font-size:15px;margin:0 0 4px}
+  p.hint{color:var(--mut);margin:2px 0 10px;font-size:12.5px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px 14px}
+  label{display:block;font-size:12px;color:var(--mut)}
+  input,select,textarea{width:100%;margin-top:3px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);font:inherit}
+  textarea{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+  button{padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;cursor:pointer}
+  button.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 16px;display:flex;gap:12px;align-items:center;justify-content:center}
+  #status{font-size:13px;color:var(--mut)}
+  #status.err{color:#c0392b}#status.ok{color:#1d8a4b}
+  table{width:100%;border-collapse:collapse}
+  td{padding:4px 6px 4px 0;vertical-align:top}
+  td.q{width:45%;font-size:12.5px}
+  td.x{width:36px}
+  .chk{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink)}
+  .chk input{width:auto;margin:0}
+</style></head>
+<body><main>
+  <h1>Job Copilot</h1>
+  <div class="sub">Everything is stored locally in your browser. The only network calls go to your chosen AI provider (Gemini, or Ollama on your own machine).</div>
+
+  <section>
+    <h2>1. AI provider</h2>
+    <p class="hint">Used for the recruiter analysis, cover letters, resume tailoring and resume import. Autofill itself works without any AI.</p>
+    <label>Provider
+      <select id="provider"><option value="gemini">Google Gemini (cloud)</option><option value="ollama">Ollama (local, private)</option></select>
+    </label>
+
+    <div id="gemini-box" style="margin-top:12px">
+      <div class="grid">
+        <label>Gemini API key<input id="geminiKey" type="password" placeholder="AIza..." autocomplete="off"></label>
+        <label>Model<input id="geminiModel" placeholder="gemini-3.8-flash"></label>
+      </div>
+      <p class="hint">Default <code>gemini-3.8-flash</code> (free tier). Alternatives: <code>gemini-3.5-flash-lite</code>, <code>gemini-3.1-flash-lite</code>. Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>. Stored only in this browser. Note: on the free tier Google may use prompts to improve its products &mdash; your resume is sent in each request. Use Ollama if that matters.</p>
+    </div>
+
+    <div id="ollama-box" style="margin-top:12px">
+      <div class="grid">
+        <label>Ollama URL<input id="ollamaUrl" placeholder="http://localhost:11434"></label>
+        <label>Model<input id="ollamaModel" list="ollamaModels" placeholder="llama3.1:8b"><datalist id="ollamaModels"></datalist></label>
+      </div>
+      <div class="row"><button id="ollamaRefresh">Detect installed models</button></div>
+      <p class="hint"><b>How to connect Ollama</b></p>
+      <ol class="hint" style="margin:0;padding-left:18px">
+        <li>Install Ollama from <a href="https://ollama.com/download" target="_blank">ollama.com/download</a> and make sure it's running (tray icon on Windows).</li>
+        <li>Pull a model, e.g. in a terminal: <code>ollama pull llama3.1:8b</code> (better quality: <code>qwen2.5:14b</code> or <code>gemma2:9b</code>). Small models write weaker letters and sometimes break the JSON output.</li>
+        <li>Leave the URL as <code>http://localhost:11434</code>, click <b>Detect installed models</b>, pick one.</li>
+        <li>The extension removes the browser Origin header for local requests, so this normally just works. Only if you still get "403 / Origin blocked" (e.g. Ollama on another machine), allow the extension origin and restart Ollama. Windows (PowerShell): <code>setx OLLAMA_ORIGINS "moz-extension://*"</code> then quit and reopen Ollama. Mac/Linux: <code>OLLAMA_ORIGINS="moz-extension://*" ollama serve</code>.</li>
+        <li>Click <b>Test connection</b> below. Everything then stays on your machine.</li>
+      </ol>
+    </div>
+
+    <div class="row"><button id="testBtn">Test connection</button><span id="testStatus" class="hint"></span></div>
+    <div class="row"><label class="chk"><input type="checkbox" id="autoPopup"> Pop up automatically when a job application is detected</label></div>
+  </section>
+
+  <section>
+    <h2>2. Import your resume</h2>
+    <p class="hint">Paste the text of your resume, then let the AI turn it into your structured profile (review and edit below). Existing non-empty values in your profile are overwritten by what's parsed.</p>
+    <textarea id="resumeText" rows="8" placeholder="Paste your resume text here..."></textarea>
+    <div class="row"><button class="primary" id="parseBtn">Parse with AI</button><span id="parseStatus" class="hint"></span></div>
+  </section>
+
+  <section>
+    <h2>3. Personal details</h2>
+    <div class="grid" id="f-personal"></div>
+  </section>
+
+  <section>
+    <h2>4. Work &amp; application preferences</h2>
+    <p class="hint">Used for the standard screening questions. Yes/No fields match the form's options automatically.</p>
+    <div class="grid" id="f-work"></div>
+  </section>
+
+  <section>
+    <h2>5. Voluntary self-identification (optional)</h2>
+    <p class="hint">Leave blank to be asked each time, or enter e.g. <em>Decline to self-identify</em> — it will match "prefer not to say" style options.</p>
+    <div class="grid" id="f-eeo"></div>
+  </section>
+
+  <section>
+    <h2>6. Resume content</h2>
+    <p class="hint">The source of truth for cover letters and tailored resumes. The AI can reorder and reword but is told never to invent employers, titles, dates or metrics. Edit the JSON freely (summary, experience, education, skills, projects, certifications).</p>
+    <textarea id="resumeJson" rows="22" spellcheck="false"></textarea>
+  </section>
+
+  <section>
+    <h2>7. Resume file to attach</h2>
+    <p class="hint">Attached to resume upload fields when you autofill (a tailored PDF can replace it per application).</p>
+    <input type="file" id="resumeFile" accept=".pdf,.doc,.docx">
+    <div class="row"><span id="resumeFileName" class="hint"></span><button id="resumeFileClear">Remove</button></div>
+  </section>
+
+  <section>
+    <h2>8. Remembered answers</h2>
+    <p class="hint">Questions the extension didn't know — saved the first time you answered them, reused on every future application. Edit or delete freely, or pre-seed your own.</p>
+    <table id="answers"></table>
+    <div class="row"><button id="addAnswer">+ Add answer</button></div>
+  </section>
+</main>
+<div class="bar"><button class="primary" id="save">Save everything</button><span id="status"></span></div>
+<script src="lib/pdf.js"></script>
+<script src="lib/ai.js"></script>
+<script src="options.js"></script>
+</body></html>
